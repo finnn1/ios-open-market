@@ -19,7 +19,7 @@
 - [🚀 TroubleShooting](#-TroubleShooting)
     - [🚀 STEP 1](#-STEP-1)
 
-- STEP 내용
+- STEP별 상세 내용
     - [1️⃣ STEP 1](https://github.com/bradheo65/ios-open-market/blob/Step1/Docs/Step01.md)
 
 ## 🧑🏻‍💻🧑🏻‍💻 개발자 소개
@@ -33,12 +33,12 @@
 
 ### [ClassDiagram]
 
-![image](https://user-images.githubusercontent.com/45350356/178431451-f6a8eb17-2953-4fd9-aa20-08e5f826abc5.png)
-
+![image](https://user-images.githubusercontent.com/45350356/179156798-ab0a0963-8193-4974-8d51-7ea9712c2342.png)
 
 ## 💡 키워드
 - HTTP
 - URLSession
+- URLSession Unit Test
 
 ## 🤔 핵심경험
 - [x] 파싱한 JSON 데이터와 매핑할 모델 설계
@@ -56,13 +56,14 @@
     - Implementing Modern Collection Views
 
 
-    
 ## 📝 기능설명
 - UrlCollection: URL주소를 Enum 타입으로 만들어주었습니다
-- Network: API 주소에서 가져온 Json 타입의 데이터들을 담을 Model 구조체 입니다
-- Page: API 주소에서 가져온 Json 타입의 데이터들을 담을 Model 구조체 입니다
+- CustomError: Error 타입을 모아놓은곳 입니다
+- ProductListResponse: API 주소에서 가져온 Json 타입의 상품 리스트 데이터들을 담을 Model 구조체 입니다
+- Product: API 주소에서 가져온 Json 타입의 상품의 상세 데이터들을 담을 Model 구조체 입니다
 - JsonParser 
-    - fetch(): 매개변수로 받은 URL 주소를 GET 방식으로 서버와 데이터를 주고받습니다
+    - dataTask(): 매개변수로 받은 URL 주소를 GET 방식으로 서버와 데이터를 주고받은후 Escaping Closure로 결과값을 반환해 줍니다.
+- MockURLSession: 네트워크가 연결되지 않은 상태에서 Unit Test를 진행할때 사용할 코드 입니다
 
     
 ## 🚀 TroubleShooting
@@ -71,3 +72,6 @@
 
 #### T1. HTTP method `POST` 테스트
 `POST` method 를 통해 서버에 테스트 데이터를 API문서를 보면서 필요한 정보에 대해 Json 형식으로 `POST`를 해주었지만, 계속해서 `400` 에러가 발생되었습니다. 알고 보니 해당 서버 접근에 필요한 `id` 와 `password`가 아직 할당 받지 못해서 발생된 에러였습니다.    
+
+#### T2. 네트워크가 연결되지 않을 때 네트워크 Unit 테스트
+네트워크 Unit 테스트 목적: 인터넷에 의존하기 떄문에 테스트를 신뢰할 수 없어서, 실제 서버와 통신하면 의도치 않은 결과 도출될 수 있음. 실제 서버에 영향이 갈 수 도 있어 테스트가 필수적이다. 하지만 테스트 코드 직접 작성하고 나서 실행 시 결과 값이 클로저의 데이터값을 확인하는 것이기 때문에 비동기적으로 실행되서 무조건 `SUCCESS`로 되어서 비동기 테스트에 대한 지식이 필요하다.
