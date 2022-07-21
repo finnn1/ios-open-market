@@ -9,23 +9,14 @@ class ViewController: UIViewController {
     private var dataSource: UICollectionViewDiffableDataSource<Section, Page>?
     
     private let productsDataManager = ProductsDataManager()
-    private var productImages: [UIImage] = []
-    private var products: Products? {
-        didSet {
-            products?.pages.forEach {
-                guard let imageUrl = URL(string: $0.thumbnail),
-                      let imageData = try? Data(contentsOf: imageUrl),
-                      let image = UIImage(data: imageData) else { return }
-                productImages.append(image)
-            }
-        }
-    }
+    private var products: Products?
+    private let cache = NSCache<NSString, UIImage>()
     
     private var currentPage = 0
     private var isFetchingEnd = true
     
     private let refreshControl = UIRefreshControl()
-    private var segmentControl: UISegmentedControl?
+    private let segmentControl = UISegmentedControl(items: Titles.toString)
     private var activityIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView()
         indicator.backgroundColor = .black.withAlphaComponent(0.3)
@@ -68,6 +59,21 @@ extension ViewController {
             self.snapshot.appendItems(products.pages)
             self.currentPage = result.pageNo
             
+            products.pages.forEach {
+                
+                if self.cache.object(forKey: "\($0.id)" as NSString) == nil {
+                    print("캐시된 것 없음 : \($0.name)")
+                    
+                    guard let imageUrl = URL(string: $0.thumbnail),
+                          let imageData = try? Data(contentsOf: imageUrl),
+                          let image = UIImage(data: imageData) else { return }
+                    
+                    self.cache.setObject(image, forKey: "\($0.id)" as NSString)
+                } else {
+                    print("캐시된 이미지 있음 : \($0.name)")
+                }
+            }
+            
             DispatchQueue.main.async {
                 self.dataSource?.apply(self.snapshot, animatingDifferences: true)
                 self.isFetchingEnd = true
@@ -80,23 +86,22 @@ extension ViewController {
 
 extension ViewController {
     private func configureSegmentControl() {
-        segmentControl = UISegmentedControl(items: Titles.toString)
         
-        segmentControl?.defaultConfiguration(color: .systemBlue)
-        segmentControl?.selectedConfiguration(color: .white)
-        segmentControl?.selectedSegmentTintColor = .systemBlue
-        segmentControl?.selectedSegmentIndex = Titles.LIST.rawValue
+        segmentControl.defaultConfiguration(color: .systemBlue)
+        segmentControl.selectedConfiguration(color: .white)
+        segmentControl.selectedSegmentTintColor = .systemBlue
+        segmentControl.selectedSegmentIndex = Titles.LIST.rawValue
         
-        segmentControl?.setWidth(100, forSegmentAt: 0)
-        segmentControl?.setWidth(100, forSegmentAt: 1)
+        segmentControl.setWidth(100, forSegmentAt: 0)
+        segmentControl.setWidth(100, forSegmentAt: 1)
         
-        segmentControl?.backgroundColor = .white
-        segmentControl?.layer.borderWidth = 1.0
-        segmentControl?.layer.cornerRadius = 5.0
-        segmentControl?.layer.masksToBounds = true
-        segmentControl?.layer.borderColor = UIColor.systemBlue.cgColor
+        segmentControl.backgroundColor = .white
+        segmentControl.layer.borderWidth = 1.0
+        segmentControl.layer.cornerRadius = 5.0
+        segmentControl.layer.masksToBounds = true
+        segmentControl.layer.borderColor = UIColor.systemBlue.cgColor
         
-        segmentControl?.addTarget(self, action: #selector(changeLayout), for: .valueChanged)
+        segmentControl.addTarget(self, action: #selector(changeLayout), for: .valueChanged)
         
         navigationItem.titleView = segmentControl
     }
@@ -172,15 +177,11 @@ extension ViewController {
         let cellRegistration = UICollectionView.CellRegistration<ItemCollectionViewCell, Page> { (cell, indexPath, identifier) in
             cell.setProduct(by: identifier)
             
-            guard let segmentControl = self.segmentControl,
-                  let currentSeguement = Titles(rawValue: segmentControl.selectedSegmentIndex) else { return }
+            guard let currentSeguement = Titles(rawValue: self.segmentControl.selectedSegmentIndex) else { return }
             cell.setAxis(segment: currentSeguement)
             
-            if self.productImages.count > indexPath.row {
-                cell.setImage(by: self.productImages[indexPath.row])
-            }
-            
-            cell.backgroundColor = .systemBackground
+            guard let cachedImage = self.cache.object(forKey: "\(identifier.id)" as NSString) else { return }
+            cell.setImage(by: cachedImage)
         }
         
         guard let collectionView = collectionView else { return }
@@ -192,7 +193,7 @@ extension ViewController {
 
 extension ViewController {
     @objc private func changeLayout() {
-        if segmentControl?.selectedSegmentIndex == Titles.LIST.rawValue {
+        if segmentControl.selectedSegmentIndex == Titles.LIST.rawValue {
             isFetchingEnd = false
             self.collectionView?.setCollectionViewLayout(createListLayout(), animated: true) { bool in
                 self.isFetchingEnd = true
@@ -201,7 +202,7 @@ extension ViewController {
                 guard let cell = cell as? ItemCollectionViewCell else { return }
                 cell.setAxis(segment: .LIST)
             }
-        } else if segmentControl?.selectedSegmentIndex == Titles.GRID.rawValue {
+        } else if segmentControl.selectedSegmentIndex == Titles.GRID.rawValue {
             isFetchingEnd = false
             self.collectionView?.setCollectionViewLayout(createGridLayout(), animated: true) { bool in
                 self.isFetchingEnd = true
@@ -217,7 +218,6 @@ extension ViewController {
 extension ViewController {
     @objc private func refresh(_ sender: AnyObject) {
         snapshot.deleteAllItems()
-        productImages.removeAll()
         
         currentPage = 0
         
